@@ -91,10 +91,10 @@
 <svelte:head>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;700&family=Oswald:wght@400;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;700&family=Oswald:wght@400;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
 </svelte:head>
 
-<div class="min-h-screen" style="background: #111111; font-family: 'Inter', sans-serif;">
+<div class="min-h-screen" style="background: #111111; font-family: 'Nunito', sans-serif;">
 
   <!-- Header -->
   <header class="border-b" style="border-color: #1E1E1E;">
@@ -106,7 +106,7 @@
             <path d="M7 8h4M7 12h8M7 16h5"/>
           </svg>
         </div>
-        <span class="font-semibold text-sm tracking-tight" style="color: #F5F2EE; font-family: 'Space Grotesk', sans-serif;">CardDeployer</span>
+        <span class="font-semibold text-sm tracking-tight" style="color: #F5F2EE; font-family: 'Nunito', sans-serif;">CardDeployer</span>
       </div>
       <span class="text-xs px-2 py-1 rounded-full" style="background: #1A1200; color: #F59E0B; border: 1px solid #3D2E00;">AI-powered</span>
     </div>
@@ -116,7 +116,7 @@
 
     <!-- Hero -->
     <div class="text-center mb-14">
-      <h1 class="text-5xl font-bold mb-4 tracking-tight" style="color: #F5F2EE; font-family: 'Space Grotesk', sans-serif; line-height: 1.1;">
+      <h1 class="text-5xl font-bold mb-4 tracking-tight" style="color: #F5F2EE; font-family: 'Nunito', sans-serif; line-height: 1.1;">
         Your card, <span style="color: #F59E0B;">Just enter details and get your card! :)</span>
       </h1>
       <p class="text-base" style="color: #6B6B6B;">Describe your brand. Get a professional visiting card in seconds.</p>
@@ -200,7 +200,7 @@
             placeholder="e.g. Minimal black and gold card for a software consultant at a luxury tech firm"
             rows="4"
             class="w-full rounded-xl text-sm resize-none transition-all"
-            style="background: #161616; border: 1px solid #2A2A2A; color: #F5F2EE; padding: 14px 16px; outline: none; font-family: 'Inter', sans-serif;"
+            style="background: #161616; border: 1px solid #2A2A2A; color: #F5F2EE; padding: 14px 16px; outline: none; font-family: 'Nunito', sans-serif;"
           ></textarea>
         </div>
 
@@ -208,7 +208,7 @@
           onclick={generateCard}
           disabled={loading}
           class="w-full py-3.5 rounded-xl font-semibold text-sm transition-all"
-          style="background: {loading ? '#D97706' : '#F59E0B'}; color: #111111; font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.01em;"
+          style="background: {loading ? '#D97706' : '#F59E0B'}; color: #111111; font-family: 'Nunito', sans-serif; letter-spacing: 0.01em;"
         >
           {loading ? '✦ Generating your card...' : '✦ Generate Card'}
         </button>
