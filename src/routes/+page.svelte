@@ -94,7 +94,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;700&family=Oswald:wght@400;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
 </svelte:head>
 
-<div class="min-h-screen" style="background: #0F0F0F; font-family: 'Inter', sans-serif;">
+<div class="min-h-screen" style="background: #111111; font-family: 'Inter', sans-serif;">
 
   <!-- Header -->
   <header class="border-b" style="border-color: #1E1E1E;">
@@ -106,9 +106,9 @@
             <path d="M7 8h4M7 12h8M7 16h5"/>
           </svg>
         </div>
-        <span class="font-semibold text-sm tracking-tight" style="color: #F5F2EE; font-family: 'Space Grotesk', sans-serif;">CardForge</span>
+        <span class="font-semibold text-sm tracking-tight" style="color: #F5F2EE; font-family: 'Space Grotesk', sans-serif;">CardDeployer</span>
       </div>
-      <span class="text-xs px-2 py-1 rounded-full" style="background: #1A1A2E; color: #6366F1; border: 1px solid #2D2D5E;">AI-powered</span>
+      <span class="text-xs px-2 py-1 rounded-full" style="background: #1A1200; color: #6366F1; border: 1px solid #3D2E00;">AI-powered</span>
     </div>
   </header>
 
@@ -147,7 +147,7 @@ onblur={() => {}}
           onclick={generateCard}
           disabled={loading}
           class="w-full py-3.5 rounded-xl font-semibold text-sm transition-all"
-          style="background: {loading ? '#3730A3' : '#6366F1'}; color: white; font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.01em;"
+          style="background: {loading ? '#D97706' : '#6366F1'}; color: #111111; font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.01em;"
         >
           {loading ? '✦ Generating your card...' : '✦ Generate Card'}
         </button>
