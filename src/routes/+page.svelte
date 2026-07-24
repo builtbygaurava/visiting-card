@@ -1,5 +1,6 @@
 <script lang="ts">
   import { toPng } from 'html-to-image';
+  import { onMount } from 'svelte';
 
   let prompt = $state('');
   let loading = $state(false);
@@ -7,11 +8,9 @@
   let error = $state('');
   let logoBase64 = $state('');
   let showBackground = $state(true);
-
-  // Background options
-  let bgType = $state('solid'); // solid | gradient | pattern | image
+  let bgType = $state('solid');
   let gradientColor2 = $state('#ffffff');
-  let patternType = $state('dots'); // dots | lines | grid
+  let patternType = $state('dots');
   let bgImageBase64 = $state('');
 
   async function generateCard() {
@@ -32,14 +31,22 @@
         error = data.error;
       } else {
         const validFonts = ['Montserrat', 'Poppins', 'Playfair Display', 'Roboto', 'Oswald', 'Lora', 'Nunito', 'Inter'];
-        if (!validFonts.includes(data.font)) {
-          data.font = 'Nunito';
-        }
+        if (!validFonts.includes(data.font)) data.font = 'Nunito';
         if (!data.phone || data.phone === '+1 (555) 000-0000') {
           const phoneMatch = prompt.match(/(\+?\d[\d\s\-().]{7,})/);
           data.phone = phoneMatch ? phoneMatch[0].trim() : '';
         }
         cardData = data;
+        // Reset positions when new card is generated
+        positions = {
+          logo: { x: 0, y: 0 },
+          name: { x: 0, y: 0 },
+          title: { x: 0, y: 0 },
+          company: { x: 0, y: 0 },
+          tagline: { x: 0, y: 0 },
+          phone: { x: 0, y: 0 },
+        };
+        setTimeout(initDraggable, 100);
       }
     } catch (err) {
       error = 'Something went wrong. Try again.';
@@ -48,14 +55,42 @@
     }
   }
 
+  // Track positions of each draggable element
+  let positions = $state({
+    logo: { x: 0, y: 0 },
+    name: { x: 0, y: 0 },
+    title: { x: 0, y: 0 },
+    company: { x: 0, y: 0 },
+    tagline: { x: 0, y: 0 },
+    phone: { x: 0, y: 0 },
+  });
+
+  async function initDraggable() {
+    const interact = (await import('interactjs')).default;
+
+    const elements = ['logo', 'name', 'title', 'company', 'tagline', 'phone'];
+    elements.forEach((id) => {
+      const el = document.getElementById(`drag-${id}`);
+      if (!el) return;
+
+      interact(el).draggable({
+        listeners: {
+          move(event: any) {
+            positions[id as keyof typeof positions].x += event.dx;
+            positions[id as keyof typeof positions].y += event.dy;
+            event.target.style.transform = `translate(${positions[id as keyof typeof positions].x}px, ${positions[id as keyof typeof positions].y}px)`;
+          }
+        }
+      });
+    });
+  }
+
   function handleLogoUpload(e: Event) {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      logoBase64 = ev.target?.result as string;
-    };
+    reader.onload = (ev) => { logoBase64 = ev.target?.result as string; };
     reader.readAsDataURL(file);
   }
 
@@ -64,42 +99,28 @@
     const file = input.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      bgImageBase64 = ev.target?.result as string;
-      bgType = 'image';
-    };
+    reader.onload = (ev) => { bgImageBase64 = ev.target?.result as string; bgType = 'image'; };
     reader.readAsDataURL(file);
   }
 
-  function getCardBackground() {
-    if (!showBackground) return 'transparent';
-    if (!cardData) return 'transparent';
+  function getCardBackgroundStyle() {
+    if (!showBackground) return 'background: transparent;';
+    if (!cardData) return 'background: transparent;';
     switch (bgType) {
       case 'gradient':
-        return `linear-gradient(135deg, ${cardData.primaryColor}, ${gradientColor2})`;
+        return `background: linear-gradient(135deg, ${cardData.primaryColor}, ${gradientColor2});`;
       case 'pattern':
-        if (patternType === 'dots') {
-          return `radial-gradient(circle, ${cardData.secondaryColor}22 1px, transparent 1px), ${cardData.primaryColor}`;
-        } else if (patternType === 'lines') {
-          return `repeating-linear-gradient(45deg, ${cardData.secondaryColor}22 0px, ${cardData.secondaryColor}22 1px, transparent 1px, transparent 10px), ${cardData.primaryColor}`;
-        } else {
-          return `repeating-linear-gradient(0deg, ${cardData.secondaryColor}22 0px, ${cardData.secondaryColor}22 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, ${cardData.secondaryColor}22 0px, ${cardData.secondaryColor}22 1px, transparent 1px, transparent 20px), ${cardData.primaryColor}`;
-        }
+        if (patternType === 'dots')
+          return `background: radial-gradient(circle, ${cardData.secondaryColor}33 1px, transparent 1px), ${cardData.primaryColor}; background-size: 12px 12px;`;
+        if (patternType === 'lines')
+          return `background: repeating-linear-gradient(45deg, ${cardData.secondaryColor}22 0px, ${cardData.secondaryColor}22 1px, transparent 1px, transparent 10px), ${cardData.primaryColor};`;
+        return `background: repeating-linear-gradient(0deg, ${cardData.secondaryColor}22 0px, ${cardData.secondaryColor}22 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, ${cardData.secondaryColor}22 0px, ${cardData.secondaryColor}22 1px, transparent 1px, transparent 20px), ${cardData.primaryColor};`;
       case 'image':
-        return bgImageBase64 ? `url(${bgImageBase64})` : cardData.primaryColor;
+        if (bgImageBase64) return `background: url(${bgImageBase64}) center/cover no-repeat;`;
+        return `background: ${cardData.primaryColor};`;
       default:
-        return cardData.primaryColor;
+        return `background: ${cardData.primaryColor};`;
     }
-  }
-
-  function getCardBackgroundStyle() {
-    if (bgType === 'image' && bgImageBase64) {
-      return `background: url(${bgImageBase64}) center/cover no-repeat;`;
-    }
-    if (bgType === 'pattern') {
-      return `background: ${getCardBackground()}; background-size: ${patternType === 'dots' ? '12px 12px' : '20px 20px'};`;
-    }
-    return `background: ${getCardBackground()};`;
   }
 
   async function downloadCard() {
@@ -179,51 +200,69 @@
           <div class="relative" style="filter: drop-shadow(0 25px 50px rgba(245,158,11,0.15));">
             <div
               id="card-preview"
-              class="w-96 rounded-2xl p-8 flex flex-col justify-between overflow-hidden"
+              class="w-96 rounded-2xl overflow-hidden relative"
               style="{getCardBackgroundStyle()} font-family: '{cardData.font}', sans-serif; min-height: 224px; transform: rotate(-1deg); border: {showBackground ? 'none' : '1px dashed #3A3A3A'};"
             >
-              <div>
+              <!-- All elements are absolutely positioned and draggable -->
+              <div class="relative w-full h-full" style="min-height: 224px; padding: 32px;">
+
                 {#if logoBase64}
-                  <img src={logoBase64} alt="Logo" class="h-10 w-10 object-contain mb-3 rounded" />
+                  <div id="drag-logo" class="absolute cursor-move inline-block" style="top: 24px; left: 24px; touch-action: none;">
+                    <img src={logoBase64} alt="Logo" class="h-10 w-10 object-contain rounded" />
+                  </div>
                 {/if}
-                <h2
-                  contenteditable="true"
-                  bind:innerText={cardData.name}
-                  class="text-2xl font-bold outline-none rounded px-1 -mx-1"
-                  style="color: {cardData.secondaryColor};"
-                ></h2>
-                <p
-                  contenteditable="true"
-                  bind:innerText={cardData.title}
-                  class="text-sm mt-1 outline-none rounded px-1 -mx-1 opacity-80"
-                  style="color: {cardData.secondaryColor};"
-                ></p>
-              </div>
-              <div class="mt-4">
-                <p
-                  contenteditable="true"
-                  bind:innerText={cardData.company}
-                  class="font-semibold outline-none rounded px-1 -mx-1"
-                  style="color: {cardData.secondaryColor};"
-                ></p>
-                <p
-                  contenteditable="true"
-                  bind:innerText={cardData.tagline}
-                  class="text-xs italic mt-0.5 outline-none rounded px-1 -mx-1 opacity-70"
-                  style="color: {cardData.secondaryColor};"
-                ></p>
-                {#if cardData.phone}
+
+                <div id="drag-name" class="absolute cursor-move" style="top: {logoBase64 ? '80px' : '24px'}; left: 24px; touch-action: none;">
+                  <h2
+                    contenteditable="true"
+                    bind:innerText={cardData.name}
+                    class="text-2xl font-bold outline-none"
+                    style="color: {cardData.secondaryColor};"
+                  ></h2>
+                </div>
+
+                <div id="drag-title" class="absolute cursor-move" style="top: {logoBase64 ? '116px' : '64px'}; left: 24px; touch-action: none;">
                   <p
                     contenteditable="true"
-                    bind:innerText={cardData.phone}
-                    class="text-xs mt-2 outline-none rounded px-1 -mx-1 opacity-80"
+                    bind:innerText={cardData.title}
+                    class="text-sm outline-none opacity-80"
                     style="color: {cardData.secondaryColor};"
                   ></p>
+                </div>
+
+                <div id="drag-company" class="absolute cursor-move" style="bottom: 48px; left: 24px; touch-action: none;">
+                  <p
+                    contenteditable="true"
+                    bind:innerText={cardData.company}
+                    class="font-semibold outline-none"
+                    style="color: {cardData.secondaryColor};"
+                  ></p>
+                </div>
+
+                <div id="drag-tagline" class="absolute cursor-move" style="bottom: 28px; left: 24px; touch-action: none;">
+                  <p
+                    contenteditable="true"
+                    bind:innerText={cardData.tagline}
+                    class="text-xs italic outline-none opacity-70"
+                    style="color: {cardData.secondaryColor};"
+                  ></p>
+                </div>
+
+                {#if cardData.phone}
+                  <div id="drag-phone" class="absolute cursor-move" style="bottom: 12px; left: 24px; touch-action: none;">
+                    <p
+                      contenteditable="true"
+                      bind:innerText={cardData.phone}
+                      class="text-xs outline-none opacity-80"
+                      style="color: {cardData.secondaryColor};"
+                    ></p>
+                  </div>
                 {/if}
+
               </div>
             </div>
           </div>
-          <p class="text-xs mt-4" style="color: #3A3A3A;">Click any text on the card to edit it</p>
+          <p class="text-xs mt-4" style="color: #3A3A3A;">✦ Drag elements to reposition · Click text to edit</p>
         {/if}
       </div>
 
@@ -258,7 +297,6 @@
         <div class="pt-2 space-y-3">
           <p class="text-xs font-medium uppercase tracking-widest" style="color: #6B6B6B;">Customize</p>
 
-          <!-- Text + Font -->
           <div class="grid grid-cols-3 gap-3">
             <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
               <p class="text-xs mb-2" style="color: #6B6B6B;">Card Color</p>
@@ -297,7 +335,6 @@
               {/each}
             </div>
 
-            <!-- Solid options -->
             {#if bgType === 'solid'}
               <div class="mt-3 flex items-center gap-2">
                 <span class="text-xs" style="color: #6B6B6B;">Color:</span>
@@ -312,7 +349,6 @@
               </div>
             {/if}
 
-            <!-- Gradient options -->
             {#if bgType === 'gradient'}
               <div class="mt-3 flex items-center gap-3">
                 <span class="text-xs" style="color: #6B6B6B;">Color 1:</span>
@@ -322,7 +358,6 @@
               </div>
             {/if}
 
-            <!-- Pattern options -->
             {#if bgType === 'pattern'}
               <div class="mt-3 space-y-2">
                 <div class="flex gap-2">
@@ -343,7 +378,6 @@
               </div>
             {/if}
 
-            <!-- Image upload -->
             {#if bgType === 'image'}
               <div class="mt-3">
                 <label for="bg-upload" class="cursor-pointer text-xs px-3 py-1.5 rounded-lg inline-block" style="background: #2A2A2A; color: #F5F2EE;">
@@ -357,7 +391,7 @@
             {/if}
           </div>
 
-          <!-- Logo upload -->
+          <!-- Logo -->
           <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
             <p class="text-xs mb-2" style="color: #6B6B6B;">Logo (optional)</p>
             <div class="flex items-center gap-2">
@@ -373,7 +407,6 @@
             </div>
           </div>
 
-          <!-- Download -->
           <button
             onclick={downloadCard}
             class="w-full py-3 rounded-xl font-semibold text-sm transition-all"
@@ -385,7 +418,6 @@
         {/if}
 
       </div>
-
     </div>
   </main>
 </div>
@@ -403,5 +435,13 @@
   select option {
     background: #161616;
     color: #F5F2EE;
+  }
+  [id^="drag-"] {
+    user-select: none;
+  }
+  [id^="drag-"]:hover {
+    outline: 1px dashed rgba(245,158,11,0.4);
+    outline-offset: 4px;
+    border-radius: 4px;
   }
 </style>
