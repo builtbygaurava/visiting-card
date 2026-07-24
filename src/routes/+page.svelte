@@ -5,7 +5,7 @@
   let loading = $state(false);
   let cardData = $state<any>(null);
   let error = $state('');
-  let logoUrl = $state('');
+  let logoBase64 = $state('');
   let showBackground = $state(true);
 
   async function generateCard() {
@@ -29,7 +29,12 @@
         if (!validFonts.includes(data.font)) {
           data.font = 'Nunito';
         }
-        cardData = data;
+        // Extract phone from prompt if Gemini didn't return one
+if (!data.phone || data.phone === '+1 (555) 000-0000') {
+  const phoneMatch = prompt.match(/(\+?\d[\d\s\-().]{7,})/);
+  data.phone = phoneMatch ? phoneMatch[0].trim() : '';
+}
+cardData = data;
       }
     } catch (err) {
       error = 'Something went wrong. Try again.';
@@ -42,13 +47,16 @@
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    logoUrl = URL.createObjectURL(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      logoBase64 = ev.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   }
 
   async function downloadCard() {
     const card = document.getElementById('card-preview');
     if (!card) return;
-
     try {
       const dataUrl = await toPng(card, {
         pixelRatio: 3,
@@ -72,7 +80,6 @@
 
 <div class="min-h-screen" style="background: #111111; font-family: 'Nunito', sans-serif;">
 
-  <!-- Header -->
   <header class="border-b" style="border-color: #1E1E1E;">
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
       <div class="flex items-center gap-2">
@@ -90,7 +97,6 @@
 
   <main class="max-w-6xl mx-auto px-6 py-12">
 
-    <!-- Hero -->
     <div class="text-center mb-14">
       <h1 class="text-5xl font-bold mb-4 tracking-tight" style="color: #F5F2EE; font-family: 'Nunito', sans-serif; line-height: 1.1;">
         Your card, <span style="color: #F59E0B;">Just enter details and get your card! :)</span>
@@ -98,7 +104,6 @@
       <p class="text-base" style="color: #6B6B6B;">Describe your brand. Get a professional visiting card in seconds.</p>
     </div>
 
-    <!-- Two column layout — Card LEFT, Controls RIGHT -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
 
       <!-- LEFT: Card Preview -->
@@ -130,8 +135,8 @@
               style="background-color: {showBackground ? cardData.primaryColor : 'transparent'}; font-family: '{cardData.font}', sans-serif; min-height: 224px; transform: rotate(-1deg); border: {showBackground ? 'none' : '1px dashed #3A3A3A'};"
             >
               <div>
-                {#if logoUrl}
-                  <img src={logoUrl} alt="Logo" class="h-10 w-10 object-contain mb-3 rounded" />
+                {#if logoBase64}
+                  <img src={logoBase64} alt="Logo" class="h-10 w-10 object-contain mb-3 rounded" />
                 {/if}
                 <h2
                   contenteditable="true"
@@ -159,12 +164,14 @@
                   class="text-xs italic mt-0.5 outline-none rounded px-1 -mx-1 opacity-70"
                   style="color: {cardData.secondaryColor};"
                 ></p>
-                <p
-                  contenteditable="true"
-                  bind:innerText={cardData.phone}
-                  class="text-xs mt-2 outline-none rounded px-1 -mx-1 opacity-80"
-                  style="color: {cardData.secondaryColor};"
-                ></p>
+                {#if cardData.phone}
+                  <p
+                    contenteditable="true"
+                    bind:innerText={cardData.phone}
+                    class="text-xs mt-2 outline-none rounded px-1 -mx-1 opacity-80"
+                    style="color: {cardData.secondaryColor};"
+                  ></p>
+                {/if}
               </div>
             </div>
           </div>
@@ -203,7 +210,6 @@
         <div class="pt-2">
           <p class="text-xs font-medium uppercase tracking-widest mb-4" style="color: #6B6B6B;">Customize</p>
 
-          <!-- Colors + Font -->
           <div class="grid grid-cols-3 gap-3">
             <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
               <p class="text-xs mb-2" style="color: #6B6B6B;">Background</p>
@@ -227,7 +233,6 @@
             </div>
           </div>
 
-          <!-- Background toggle + Logo -->
           <div class="grid grid-cols-2 gap-3 mt-3">
             <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
               <p class="text-xs mb-2" style="color: #6B6B6B;">Background</p>
@@ -246,14 +251,13 @@
                   Upload
                 </label>
                 <input id="logo-upload" type="file" accept="image/*" onchange={handleLogoUpload} class="hidden" />
-                {#if logoUrl}
-                  <button onclick={() => logoUrl = ''} class="text-xs px-2 py-1.5 rounded-lg" style="background: #3A1515; color: #EF4444;">Remove</button>
+                {#if logoBase64}
+                  <button onclick={() => logoBase64 = ''} class="text-xs px-2 py-1.5 rounded-lg" style="background: #3A1515; color: #EF4444;">Remove</button>
                 {/if}
               </div>
             </div>
           </div>
 
-          <!-- Download -->
           <button
             onclick={downloadCard}
             class="mt-3 w-full py-3 rounded-xl font-semibold text-sm transition-all"
