@@ -8,6 +8,12 @@
   let logoBase64 = $state('');
   let showBackground = $state(true);
 
+  // Background options
+  let bgType = $state('solid'); // solid | gradient | pattern | image
+  let gradientColor2 = $state('#ffffff');
+  let patternType = $state('dots'); // dots | lines | grid
+  let bgImageBase64 = $state('');
+
   async function generateCard() {
     if (!prompt.trim()) return;
     loading = true;
@@ -29,12 +35,11 @@
         if (!validFonts.includes(data.font)) {
           data.font = 'Nunito';
         }
-        // Extract phone from prompt if Gemini didn't return one
-if (!data.phone || data.phone === '+1 (555) 000-0000') {
-  const phoneMatch = prompt.match(/(\+?\d[\d\s\-().]{7,})/);
-  data.phone = phoneMatch ? phoneMatch[0].trim() : '';
-}
-cardData = data;
+        if (!data.phone || data.phone === '+1 (555) 000-0000') {
+          const phoneMatch = prompt.match(/(\+?\d[\d\s\-().]{7,})/);
+          data.phone = phoneMatch ? phoneMatch[0].trim() : '';
+        }
+        cardData = data;
       }
     } catch (err) {
       error = 'Something went wrong. Try again.';
@@ -52,6 +57,49 @@ cardData = data;
       logoBase64 = ev.target?.result as string;
     };
     reader.readAsDataURL(file);
+  }
+
+  function handleBgImageUpload(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      bgImageBase64 = ev.target?.result as string;
+      bgType = 'image';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function getCardBackground() {
+    if (!showBackground) return 'transparent';
+    if (!cardData) return 'transparent';
+    switch (bgType) {
+      case 'gradient':
+        return `linear-gradient(135deg, ${cardData.primaryColor}, ${gradientColor2})`;
+      case 'pattern':
+        if (patternType === 'dots') {
+          return `radial-gradient(circle, ${cardData.secondaryColor}22 1px, transparent 1px), ${cardData.primaryColor}`;
+        } else if (patternType === 'lines') {
+          return `repeating-linear-gradient(45deg, ${cardData.secondaryColor}22 0px, ${cardData.secondaryColor}22 1px, transparent 1px, transparent 10px), ${cardData.primaryColor}`;
+        } else {
+          return `repeating-linear-gradient(0deg, ${cardData.secondaryColor}22 0px, ${cardData.secondaryColor}22 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, ${cardData.secondaryColor}22 0px, ${cardData.secondaryColor}22 1px, transparent 1px, transparent 20px), ${cardData.primaryColor}`;
+        }
+      case 'image':
+        return bgImageBase64 ? `url(${bgImageBase64})` : cardData.primaryColor;
+      default:
+        return cardData.primaryColor;
+    }
+  }
+
+  function getCardBackgroundStyle() {
+    if (bgType === 'image' && bgImageBase64) {
+      return `background: url(${bgImageBase64}) center/cover no-repeat;`;
+    }
+    if (bgType === 'pattern') {
+      return `background: ${getCardBackground()}; background-size: ${patternType === 'dots' ? '12px 12px' : '20px 20px'};`;
+    }
+    return `background: ${getCardBackground()};`;
   }
 
   async function downloadCard() {
@@ -131,8 +179,8 @@ cardData = data;
           <div class="relative" style="filter: drop-shadow(0 25px 50px rgba(245,158,11,0.15));">
             <div
               id="card-preview"
-              class="w-96 rounded-2xl p-8 flex flex-col justify-between"
-              style="background-color: {showBackground ? cardData.primaryColor : 'transparent'}; font-family: '{cardData.font}', sans-serif; min-height: 224px; transform: rotate(-1deg); border: {showBackground ? 'none' : '1px dashed #3A3A3A'};"
+              class="w-96 rounded-2xl p-8 flex flex-col justify-between overflow-hidden"
+              style="{getCardBackgroundStyle()} font-family: '{cardData.font}', sans-serif; min-height: 224px; transform: rotate(-1deg); border: {showBackground ? 'none' : '1px dashed #3A3A3A'};"
             >
               <div>
                 {#if logoBase64}
@@ -197,7 +245,7 @@ cardData = data;
           onclick={generateCard}
           disabled={loading}
           class="w-full py-3.5 rounded-xl font-semibold text-sm transition-all"
-          style="background: {loading ? '#D97706' : '#F59E0B'}; color: #111111; font-family: 'Nunito', sans-serif; letter-spacing: 0.01em;"
+          style="background: {loading ? '#D97706' : '#F59E0B'}; color: #111111; font-family: 'Nunito', sans-serif;"
         >
           {loading ? '✦ Generating your card...' : '✦ Generate Card'}
         </button>
@@ -207,16 +255,17 @@ cardData = data;
         {/if}
 
         {#if cardData}
-        <div class="pt-2">
-          <p class="text-xs font-medium uppercase tracking-widest mb-4" style="color: #6B6B6B;">Customize</p>
+        <div class="pt-2 space-y-3">
+          <p class="text-xs font-medium uppercase tracking-widest" style="color: #6B6B6B;">Customize</p>
 
+          <!-- Text + Font -->
           <div class="grid grid-cols-3 gap-3">
             <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
-              <p class="text-xs mb-2" style="color: #6B6B6B;">Background</p>
+              <p class="text-xs mb-2" style="color: #6B6B6B;">Card Color</p>
               <input type="color" bind:value={cardData.primaryColor} class="w-full h-8 rounded cursor-pointer border-0 bg-transparent" />
             </div>
             <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
-              <p class="text-xs mb-2" style="color: #6B6B6B;">Text</p>
+              <p class="text-xs mb-2" style="color: #6B6B6B;">Text Color</p>
               <input type="color" bind:value={cardData.secondaryColor} class="w-full h-8 rounded cursor-pointer border-0 bg-transparent" />
             </div>
             <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
@@ -233,34 +282,101 @@ cardData = data;
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3 mt-3">
-            <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
-              <p class="text-xs mb-2" style="color: #6B6B6B;">Background</p>
-              <button
-                onclick={() => showBackground = !showBackground}
-                class="w-full text-xs py-1.5 rounded-lg font-medium transition-all"
-                style="background: {showBackground ? '#F59E0B' : '#2A2A2A'}; color: {showBackground ? '#111111' : '#F5F2EE'};"
-              >
-                {showBackground ? '✓ Visible' : '✗ Hidden'}
-              </button>
+          <!-- Background Type -->
+          <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
+            <p class="text-xs mb-2" style="color: #6B6B6B;">Background Type</p>
+            <div class="grid grid-cols-4 gap-2">
+              {#each ['solid', 'gradient', 'pattern', 'image'] as type}
+                <button
+                  onclick={() => bgType = type}
+                  class="text-xs py-1.5 rounded-lg capitalize font-medium transition-all"
+                  style="background: {bgType === type ? '#F59E0B' : '#2A2A2A'}; color: {bgType === type ? '#111111' : '#F5F2EE'};"
+                >
+                  {type}
+                </button>
+              {/each}
             </div>
-            <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
-              <p class="text-xs mb-2" style="color: #6B6B6B;">Logo</p>
-              <div class="flex items-center gap-2">
-                <label for="logo-upload" class="cursor-pointer text-xs px-2 py-1.5 rounded-lg flex-1 text-center" style="background: #2A2A2A; color: #F5F2EE;">
-                  Upload
+
+            <!-- Solid options -->
+            {#if bgType === 'solid'}
+              <div class="mt-3 flex items-center gap-2">
+                <span class="text-xs" style="color: #6B6B6B;">Color:</span>
+                <input type="color" bind:value={cardData.primaryColor} class="h-7 w-12 rounded cursor-pointer border-0 bg-transparent" />
+                <button
+                  onclick={() => showBackground = !showBackground}
+                  class="text-xs px-2 py-1 rounded-lg ml-auto"
+                  style="background: {showBackground ? '#F59E0B22' : '#2A2A2A'}; color: {showBackground ? '#F59E0B' : '#6B6B6B'}; border: 1px solid {showBackground ? '#F59E0B44' : '#3A3A3A'};"
+                >
+                  {showBackground ? '✓ Visible' : '✗ Hidden'}
+                </button>
+              </div>
+            {/if}
+
+            <!-- Gradient options -->
+            {#if bgType === 'gradient'}
+              <div class="mt-3 flex items-center gap-3">
+                <span class="text-xs" style="color: #6B6B6B;">Color 1:</span>
+                <input type="color" bind:value={cardData.primaryColor} class="h-7 w-12 rounded cursor-pointer border-0 bg-transparent" />
+                <span class="text-xs" style="color: #6B6B6B;">Color 2:</span>
+                <input type="color" bind:value={gradientColor2} class="h-7 w-12 rounded cursor-pointer border-0 bg-transparent" />
+              </div>
+            {/if}
+
+            <!-- Pattern options -->
+            {#if bgType === 'pattern'}
+              <div class="mt-3 space-y-2">
+                <div class="flex gap-2">
+                  {#each ['dots', 'lines', 'grid'] as p}
+                    <button
+                      onclick={() => patternType = p}
+                      class="text-xs px-3 py-1 rounded-lg capitalize"
+                      style="background: {patternType === p ? '#F59E0B' : '#2A2A2A'}; color: {patternType === p ? '#111111' : '#F5F2EE'};"
+                    >
+                      {p}
+                    </button>
+                  {/each}
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-xs" style="color: #6B6B6B;">Base color:</span>
+                  <input type="color" bind:value={cardData.primaryColor} class="h-7 w-12 rounded cursor-pointer border-0 bg-transparent" />
+                </div>
+              </div>
+            {/if}
+
+            <!-- Image upload -->
+            {#if bgType === 'image'}
+              <div class="mt-3">
+                <label for="bg-upload" class="cursor-pointer text-xs px-3 py-1.5 rounded-lg inline-block" style="background: #2A2A2A; color: #F5F2EE;">
+                  {bgImageBase64 ? 'Change image' : 'Upload image'}
                 </label>
-                <input id="logo-upload" type="file" accept="image/*" onchange={handleLogoUpload} class="hidden" />
-                {#if logoBase64}
-                  <button onclick={() => logoBase64 = ''} class="text-xs px-2 py-1.5 rounded-lg" style="background: #3A1515; color: #EF4444;">Remove</button>
+                <input id="bg-upload" type="file" accept="image/*" onchange={handleBgImageUpload} class="hidden" />
+                {#if bgImageBase64}
+                  <button onclick={() => { bgImageBase64 = ''; bgType = 'solid'; }} class="text-xs ml-2" style="color: #EF4444;">Remove</button>
                 {/if}
               </div>
+            {/if}
+          </div>
+
+          <!-- Logo upload -->
+          <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
+            <p class="text-xs mb-2" style="color: #6B6B6B;">Logo (optional)</p>
+            <div class="flex items-center gap-2">
+              <label for="logo-upload" class="cursor-pointer text-xs px-3 py-1.5 rounded-lg" style="background: #2A2A2A; color: #F5F2EE;">
+                Upload logo
+              </label>
+              <input id="logo-upload" type="file" accept="image/*" onchange={handleLogoUpload} class="hidden" />
+              {#if logoBase64}
+                <button onclick={() => logoBase64 = ''} class="text-xs px-2 py-1.5 rounded-lg" style="background: #3A1515; color: #EF4444;">Remove</button>
+              {:else}
+                <span class="text-xs" style="color: #3A3A3A;">No file selected</span>
+              {/if}
             </div>
           </div>
 
+          <!-- Download -->
           <button
             onclick={downloadCard}
-            class="mt-3 w-full py-3 rounded-xl font-semibold text-sm transition-all"
+            class="w-full py-3 rounded-xl font-semibold text-sm transition-all"
             style="background: #161616; color: #F59E0B; border: 1px solid #3A2E1A; font-family: 'Nunito', sans-serif;"
           >
             ↓ Download Card
