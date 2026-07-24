@@ -1,14 +1,12 @@
 <script lang="ts">
   import { toPng } from 'html-to-image';
-  import { storage, ID } from '$lib/appwrite';
-  import { PUBLIC_APPWRITE_BUCKET_ID } from '$env/static/public';
 
   let prompt = $state('');
   let loading = $state(false);
   let cardData = $state<any>(null);
   let error = $state('');
   let logoUrl = $state('');
-  let uploading = $state(false);
+  let showBackground = $state(true);
 
   async function generateCard() {
     if (!prompt.trim()) return;
@@ -27,9 +25,9 @@
       if (data.error) {
         error = data.error;
       } else {
-        const validFonts = ['Montserrat', 'Poppins', 'Playfair Display', 'Roboto', 'Oswald', 'Lora', 'Space Grotesk', 'Inter'];
+        const validFonts = ['Montserrat', 'Poppins', 'Playfair Display', 'Roboto', 'Oswald', 'Lora', 'Nunito', 'Inter'];
         if (!validFonts.includes(data.font)) {
-          data.font = 'Space Grotesk';
+          data.font = 'Nunito';
         }
         cardData = data;
       }
@@ -40,36 +38,16 @@
     }
   }
 
-  async function handleLogoUpload(e: Event) {
+  function handleLogoUpload(e: Event) {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-
-    uploading = true;
-    try {
-      const result = await storage.createFile({
-        bucketId: PUBLIC_APPWRITE_BUCKET_ID,
-        fileId: ID.unique(),
-        file: file
-      });
-      const url = storage.getFileView({
-        bucketId: PUBLIC_APPWRITE_BUCKET_ID,
-        fileId: result.$id
-      });
-      logoUrl = url.toString();
-    } catch (err) {
-      console.error('Logo upload failed:', err);
-    } finally {
-      uploading = false;
-    }
+    logoUrl = URL.createObjectURL(file);
   }
 
   async function downloadCard() {
     const card = document.getElementById('card-preview');
     if (!card) return;
-
-    const logoImg = card.querySelector('img') as HTMLImageElement | null;
-    if (logoImg) logoImg.style.display = 'none';
 
     try {
       const dataUrl = await toPng(card, {
@@ -82,8 +60,6 @@
       link.click();
     } catch(err) {
       console.error('Download failed:', err);
-    } finally {
-      if (logoImg) logoImg.style.display = '';
     }
   }
 </script>
@@ -151,11 +127,11 @@
             <div
               id="card-preview"
               class="w-96 rounded-2xl p-8 flex flex-col justify-between"
-              style="background-color: {cardData.primaryColor}; font-family: '{cardData.font}', sans-serif; min-height: 224px; transform: rotate(-1deg);"
+              style="background-color: {showBackground ? cardData.primaryColor : 'transparent'}; font-family: '{cardData.font}', sans-serif; min-height: 224px; transform: rotate(-1deg); border: {showBackground ? 'none' : '1px dashed #3A3A3A'};"
             >
               <div>
                 {#if logoUrl}
-                  <img src={logoUrl} alt="Logo" class="h-8 w-8 object-contain mb-3 rounded" />
+                  <img src={logoUrl} alt="Logo" class="h-10 w-10 object-contain mb-3 rounded" />
                 {/if}
                 <h2
                   contenteditable="true"
@@ -170,7 +146,7 @@
                   style="color: {cardData.secondaryColor};"
                 ></p>
               </div>
-              <div>
+              <div class="mt-4">
                 <p
                   contenteditable="true"
                   bind:innerText={cardData.company}
@@ -181,6 +157,12 @@
                   contenteditable="true"
                   bind:innerText={cardData.tagline}
                   class="text-xs italic mt-0.5 outline-none rounded px-1 -mx-1 opacity-70"
+                  style="color: {cardData.secondaryColor};"
+                ></p>
+                <p
+                  contenteditable="true"
+                  bind:innerText={cardData.phone}
+                  class="text-xs mt-2 outline-none rounded px-1 -mx-1 opacity-80"
                   style="color: {cardData.secondaryColor};"
                 ></p>
               </div>
@@ -197,7 +179,7 @@
           <label class="block text-xs font-medium mb-2 uppercase tracking-widest" style="color: #6B6B6B;">Describe your card</label>
           <textarea
             bind:value={prompt}
-            placeholder="e.g. Minimal black and gold card for a software consultant at a luxury tech firm"
+            placeholder="e.g. Minimal black and gold card for Ayush Tiwari, Founder at Aeternik, +91 9977889900"
             rows="4"
             class="w-full rounded-xl text-sm resize-none transition-all"
             style="background: #161616; border: 1px solid #2A2A2A; color: #F5F2EE; padding: 14px 16px; outline: none; font-family: 'Nunito', sans-serif;"
@@ -221,6 +203,7 @@
         <div class="pt-2">
           <p class="text-xs font-medium uppercase tracking-widest mb-4" style="color: #6B6B6B;">Customize</p>
 
+          <!-- Colors + Font -->
           <div class="grid grid-cols-3 gap-3">
             <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
               <p class="text-xs mb-2" style="color: #6B6B6B;">Background</p>
@@ -233,7 +216,7 @@
             <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
               <p class="text-xs mb-2" style="color: #6B6B6B;">Font</p>
               <select bind:value={cardData.font} class="w-full text-xs rounded bg-transparent border-0 outline-none" style="color: #F5F2EE;">
-                <option value="Space Grotesk">Space Grotesk</option>
+                <option value="Nunito">Nunito</option>
                 <option value="Montserrat">Montserrat</option>
                 <option value="Poppins">Poppins</option>
                 <option value="Playfair Display">Playfair</option>
@@ -244,25 +227,37 @@
             </div>
           </div>
 
-          <div class="mt-3 rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
-            <p class="text-xs mb-2" style="color: #6B6B6B;">Logo (optional)</p>
-            <div class="flex items-center gap-3">
-              <label for="logo-upload" class="cursor-pointer text-xs px-3 py-1.5 rounded-lg" style="background: #2A2A2A; color: #F5F2EE;">
-                {uploading ? 'Uploading...' : 'Choose file'}
-              </label>
-              <input id="logo-upload" type="file" accept="image/*" onchange={handleLogoUpload} class="hidden" />
-              {#if logoUrl}
-                <button onclick={() => logoUrl = ''} class="text-xs" style="color: #EF4444;">Remove</button>
-              {:else}
-                <span class="text-xs" style="color: #3A3A3A;">No file selected</span>
-              {/if}
+          <!-- Background toggle + Logo -->
+          <div class="grid grid-cols-2 gap-3 mt-3">
+            <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
+              <p class="text-xs mb-2" style="color: #6B6B6B;">Background</p>
+              <button
+                onclick={() => showBackground = !showBackground}
+                class="w-full text-xs py-1.5 rounded-lg font-medium transition-all"
+                style="background: {showBackground ? '#F59E0B' : '#2A2A2A'}; color: {showBackground ? '#111111' : '#F5F2EE'};"
+              >
+                {showBackground ? '✓ Visible' : '✗ Hidden'}
+              </button>
+            </div>
+            <div class="rounded-xl p-3" style="background: #161616; border: 1px solid #2A2A2A;">
+              <p class="text-xs mb-2" style="color: #6B6B6B;">Logo</p>
+              <div class="flex items-center gap-2">
+                <label for="logo-upload" class="cursor-pointer text-xs px-2 py-1.5 rounded-lg flex-1 text-center" style="background: #2A2A2A; color: #F5F2EE;">
+                  Upload
+                </label>
+                <input id="logo-upload" type="file" accept="image/*" onchange={handleLogoUpload} class="hidden" />
+                {#if logoUrl}
+                  <button onclick={() => logoUrl = ''} class="text-xs px-2 py-1.5 rounded-lg" style="background: #3A1515; color: #EF4444;">Remove</button>
+                {/if}
+              </div>
             </div>
           </div>
 
+          <!-- Download -->
           <button
             onclick={downloadCard}
             class="mt-3 w-full py-3 rounded-xl font-semibold text-sm transition-all"
-            style="background: #161616; color: #F59E0B; border: 1px solid #3A2E1A; font-family: 'Space Grotesk', sans-serif;"
+            style="background: #161616; color: #F59E0B; border: 1px solid #3A2E1A; font-family: 'Nunito', sans-serif;"
           >
             ↓ Download Card
           </button>
